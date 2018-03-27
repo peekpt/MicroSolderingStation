@@ -40,7 +40,7 @@ typedef struct EepromMap {
 
 eeprom_map_t settings;
 
-U8GLIB_PCD8544 u8g(10, 9, 8); // uses 13 ,11 as Hardware pins
+U8GLIB_PCD8544 u8g(10, 9, 8); // uses 13 ,11 as Hardware pins 10-CS 9-A0 8-RS
 
 void setPwmFrequency(int, int); // sets pwm frequency divisor
 double getTemp();                 // read thermistor temp
