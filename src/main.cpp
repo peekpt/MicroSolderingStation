@@ -14,12 +14,16 @@
 
 enum VIEW { VIEW_LOGO, VIEW_MAIN, VIEW_SETTINGS} view;
 enum MEM { MEM1, MEM2, MEM3} mem;
+enum SETMENU {SM_RESET,SM_STDBY,SM_TOT,SM_PID,SM_TCORR,SM_PWR,SM_SAVE} setmenu;
 byte memoryToStore;
 ClickEncoder *encoder;
 int16_t encLast, encValue;
 
 double Setpoint, Input, Output, serialMillis, lcdMillis, logoMillis,blinkMillis, functionTimeout, standByMillis,tempBeforeEnteringStandby;
 bool isDisplayingLogo, blink, isSavingMemory, isOnStandBy;
+
+// settings menu vars;
+bool reset,resetActive,save,saveActive;
 
 typedef struct EepromMap {
   byte firstBoot;     // check for a number 123
@@ -58,6 +62,9 @@ void cicleMem();                // cicle ...MEM1->MEM2->MEM3->MEM1...
 void resetTimeouts();           // reset all timouts running to millis()
 void drawMemIcon(byte);         // draws the given memory icon
 void resetStandby();
+void rotarySettings();
+void drawTitle(const char *);
+void drawBoxedStr(u8g_uint_t, u8g_uint_t, const char *);
 
 
 SmoothThermistor therm(
@@ -74,7 +81,8 @@ PID myPID(&Input, &Output, &Setpoint, 0, 0, 0, DIRECT);
 
 
 void setup(){
-  
+  save = saveActive = resetActive = reset = false;
+
   // input and output pins
   pinMode(SENSOR_PIN, INPUT);
   pinMode(HEATER_PIN, OUTPUT);
@@ -136,6 +144,7 @@ void setup(){
   memoryToStore = settings.lastMem;
   functionTimeout = 0; 
   isOnStandBy = false;
+  setmenu = SM_RESET;
 }
 
 void loop()
@@ -181,6 +190,8 @@ void loop()
   // rotary 
   if (view == VIEW_MAIN) {
     rotaryMain();
+  }else if (view == VIEW_SETTINGS){
+    rotarySettings();
   }
 
   // logo delay 
@@ -221,6 +232,7 @@ void loop()
     // or it will call main screen
     isSavingMemory = false;
     view = VIEW_MAIN;
+    setmenu = SM_RESET;
     updateLCD();
   }
 
@@ -421,7 +433,58 @@ void viewMain() {
 }
 void viewSettings() {
   u8g.setColorIndex(1);
-  u8g.drawStr(0, 10, "SETTINGS");
+  // settings menu
+  if (setmenu == SM_RESET){          // settings main 
+    drawTitle("Settings");
+    u8g.setColorIndex(1);
+    u8g.drawStr(10,25,"Reset all?");
+    if (resetActive){
+      if (reset){
+        u8g.setColorIndex(1);
+        u8g.drawStr(18,40,"NO");
+        u8g.setColorIndex(1);
+        if (blink){
+          drawBoxedStr(48,40,"YES");
+        }      
+      }else {
+        if(blink){
+          drawBoxedStr(18,40,"NO");
+        }
+        u8g.setColorIndex(1);
+        u8g.drawStr(48,40,"YES");
+      }
+    }
+  }else if(setmenu == SM_STDBY){    // settings stand by
+    
+  }else if(setmenu == SM_TOT){    // settings timeout timer
+
+  }else if(setmenu == SM_PID){    // settings PID
+
+  }else if(setmenu == SM_TCORR){    // settings temperature correction
+
+  }else if(setmenu == SM_PWR){    // settings timeout timer
+
+  }else if(setmenu == SM_SAVE) {                         //settins save
+    drawTitle("Save");
+    u8g.setColorIndex(1);
+    u8g.drawStr(11,25,"Save All?");
+    if (saveActive){
+      if (save){
+        u8g.setColorIndex(1);
+        u8g.drawStr(18,40,"NO");
+        u8g.setColorIndex(1);
+        if (blink){
+          drawBoxedStr(48,40,"YES");
+        }      
+      }else {
+        if(blink){
+          drawBoxedStr(18,40,"NO");
+        }
+        u8g.setColorIndex(1);
+        u8g.drawStr(48,40,"YES");
+      }
+    }
+  }
 }
 
 // rotary behaviour
@@ -500,6 +563,84 @@ void rotaryMain(){
   
 }
 
+void rotarySettings(){ 
+  ClickEncoder::Button b = encoder->getButton();
+  encValue += encoder->getValue();
+
+  if(setmenu == SM_RESET){   // SETTINGS RESET
+    // on rotation
+    if (encValue != encLast) {
+      resetTimeouts();
+      if(encValue > encLast) {
+        if(resetActive){
+          reset = true;
+        }else{
+          setmenu = SM_STDBY;
+        }
+      }
+      if(encValue < encLast) {
+        if(resetActive){
+          reset = false;
+        }else{
+          setmenu = SM_SAVE;
+        }
+      }        
+    }
+    // on click
+    if (b == ClickEncoder::Clicked){
+      resetTimeouts();
+      if (resetActive){
+        if(reset){
+         resetFailSafe();
+        }else{
+          resetActive = false;
+        }
+      }else{
+      resetActive = !resetActive;
+      }
+    }
+  
+  }
+  else if (setmenu == SM_SAVE){ // SETTINGS SAVE
+    // on rotation
+    if (encValue != encLast) {
+      resetTimeouts();
+      if(encValue > encLast) {
+        if(saveActive){
+          save = true;
+        }else{
+          setmenu = SM_RESET;
+        }
+      }
+      if(encValue < encLast) {
+        if(saveActive){
+          save = false;
+        }else{
+          setmenu = SM_PWR;
+        }
+      }        
+    }
+    // on click
+    if (b == ClickEncoder::Clicked){
+      resetTimeouts();
+      if (saveActive){
+        if(save){
+         EEPROM.put(0,settings);
+         delay(100);
+         software_Reboot();
+        }else{
+          saveActive = false;
+        }
+      }else{
+      saveActive = !saveActive;
+      }
+    }
+  }
+
+  encLast = encValue;
+}
+
+
 void cicleMem(){
   switch (settings.lastMem){
     case MEM1:
@@ -564,4 +705,23 @@ void resetStandby(){
       isOnStandBy = false;
       standByMillis = millis();  
 
+}
+
+void drawTitle(const char * title){
+  u8g.setColorIndex(1);
+  u8g.drawRBox (0,0,83,10,2);
+  u8g.setColorIndex(0);
+  u8g.setFont(u8g_font_6x10r);
+  u8g.drawStr(42 - (u8g.getStrWidth(title)/2),8,title);
+  
+
+}
+
+void drawBoxedStr(u8g_uint_t x, u8g_uint_t y, const char *s){
+  uint8_t color= u8g.getColorIndex();
+  u8g.setColorIndex(1);
+  u8g.drawRBox(x-2, y-u8g.getFontLineSpacing(), u8g.getStrWidth(s) + 3,u8g.getFontLineSpacing()+2 , 2);
+  u8g.setColorIndex(0);
+  u8g.drawStr(x,y,s);
+  u8g.setColorIndex(color);
 }
