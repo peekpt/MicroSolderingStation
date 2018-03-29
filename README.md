@@ -1,6 +1,7 @@
 # Micro Soldering Station
 
 *The cheapest Micro soldering Station ever*
+**WIP**
 
 ![BOX](https://github.com/peekpt/MicroSolderingStation/blob/master/media/box.png?raw=true)
 
@@ -21,7 +22,7 @@
 - 1x Nokia LCD Module
 - 1x USB Soldering Iron
 - 1x Thermistor 100k 3950
-- 1x wire Cord 4wire(usb cable works)
+- 1x 4 wire wire cable(usb cable works)
 - 1x 5mm Led
 - 2x 1k resistor
 - 1x 4,7k resitor
@@ -31,6 +32,18 @@
 - 1x rocker switch
 
 ##Schematic
+
+![Schematic](https://github.com/peekpt/MicroSolderingStation/blob/master/media/Schematic_MicroSolderingStation.png?raw=true)
+
+##Description
+
+Remove the pcb from the soldering iron and grab a cable with 4 wires (2 for thermistor, 2 for the heater).
+Poke an hole in the side of the iron's case, near the yellow nut, to pass the 2 wires and solder them to the thermistor.
+Use kapton tape to isolate the thermistor pins and to fix the thermistor's glass tip to the iron end with some kapton turns.
+The other 2 wires connect to the heater and the led with a resistor in series. (watch the polarity of the led)
+Remove the ball bearing anc connect the led in the hole, break the spring post from the other side of the case.
+(wip...)
+
 
 
 
