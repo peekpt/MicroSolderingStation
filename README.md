@@ -2,6 +2,8 @@
 
 *The cheapest Micro soldering Station ever*
 
+![BOX](https://github.com/peekpt/MicroSolderingStation/blob/master/media/box.png?raw=true)
+
 ##Features
 
 - Cheap & easy build under 10$
@@ -26,6 +28,11 @@
 - 1x 10n Capacitor
 - Kapton tape 10-20mm
 - 1x N MosFet (or use the Iron's pcb one)
+- 1x rocker switch
+
+##Schematic
+
+
 
 
 
