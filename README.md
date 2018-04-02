@@ -3,6 +3,7 @@
 *The cheapest Micro soldering Station ever*
 
 _(WIP)_
+![BOX](https://github.com/peekpt/MicroSolderingStation/raw/master/media/DSCF9575.JPG)
 
 ![BOX](https://github.com/peekpt/MicroSolderingStation/raw/master/media/box.png)
 
