@@ -222,7 +222,7 @@ void loop() {
 
   // standby time
   if (!isOnStandBy) {
-    if (millis() - standByMillis > 1000 * settings.standbyTime) {
+    if (millis() - standByMillis > (1000 * settings.standbyTime)) {
       tempBeforeEnteringStandby = Setpoint;
       Setpoint = settings.standbyTemp;
       isOnStandBy = true;
