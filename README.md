@@ -54,8 +54,40 @@ The other 2 wires connect to the heater and the led with a resistor in series. (
 Remove the ball bearing and connect the led in the hole, break the spring post from the other side of the case.
 (wip...)
 
-## User Interface
-todo
+## User Interface Operation
+![Interface](https://github.com/peekpt/MicroSolderingStation/raw/master/media/interface_small.png)
+
+## Commands
+
+**main view**
+
+- \< >                   temp up down
+- [click]                cycle memories
+- [click & hold]         store mem mode
+- [double click]         settings mode
+
+**stand by mode**
+- [click]                  leave standby mode
+
+**store mem**
+- \< >                   select memory to store
+- [click]                store
+
+**settings mode submenus**
+ - \< >                   navigate submenus
+ - [click]                edit submenu
+
+**edit submenu**
+- \< >                   change value up down
+- [click]                exit submenu
+
+
+
+_automatic pick up detection: exits standby mode when temperture drops more than 3%_
+
+
+
+
 
 ## Screenshots
 
