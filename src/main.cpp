@@ -31,7 +31,7 @@ double Setpoint, Input, Output, serialMillis, lcdMillis, logoMillis, blinkMillis
 bool isDisplayingLogo, blink, isSavingMemory, isOnStandBy;
 
 // measuring the temp variation per second
-double tempDelta;
+double tempVariation;
 double oldTemp;
 double tempMillis;
 
@@ -82,7 +82,7 @@ void drawMemIcon(byte);         // draws the given memory icon
 void resetStandby();
 void rotarySettings();
 void drawTitle(const char *);
-void drawBoxedStr(u8g_uint_t, u8g_uint_t, const char *);
+//void drawBoxedStr(u8g_uint_t, u8g_uint_t, const char *);
 void drawSettingsView(const char *_title, const char *_value, const char * _unit, bool _blink);
 
 SmoothThermistor therm(SENSOR_PIN,      // the analog pin to read from
@@ -100,7 +100,7 @@ void setup() {
   Serial.begin(9600);
   Serial.println(F("* START *"));
 
-  tempDelta = 0;
+  tempVariation = 0;
   oldTemp = getTemp();
   // input and output pins
   pinMode(SENSOR_PIN, INPUT);
@@ -149,6 +149,7 @@ void setup() {
   default:
     Setpoint = 150;
   }
+  tempBeforeEnteringStandby = Setpoint;
 
   myPID.SetMode(AUTOMATIC);                    // enable pid controller
   myPID.SetOutputLimits(0, settings.maxPower); // limits heater pwm duty cycle
@@ -255,15 +256,22 @@ void loop() {
   // temperature delta per second
   if (millis() - tempMillis > 1000){
     double newTemp = getTemp();
-    tempDelta = newTemp - oldTemp;
-
-    if (isOnStandBy){
-      if (tempDelta < -20){
-        resetStandby();
-      }
-    }
+    tempVariation = (newTemp / oldTemp)-1;
+    oldTemp = newTemp;
     tempMillis = millis();
   }
+
+// detect temperature drop and reset standby
+
+ if(isOnStandBy){ // if on standby
+      if (tempVariation < -0.035){        
+        resetStandby();
+      }
+ }else if (tempVariation < -0.02 || tempVariation > 0.02) {  //if not on standby detect larger drops     
+        resetStandby();
+  }
+
+
 
   // Plotter
   if (millis() - serialMillis > 5000) { // pace the serial output
@@ -273,17 +281,19 @@ void loop() {
     Serial.print(" ");
     Serial.print(Output / settings.maxPower * 100);
     Serial.print(" ");
-    Serial.print(settings.p);
+    Serial.print(myPID.GetKp());
     Serial.print(" ");
-    Serial.print(settings.i);
+    Serial.print(myPID.GetKi());
     Serial.print(" ");
-    Serial.print(settings.d);
+    Serial.print(myPID.GetKd());
     Serial.print(" ");
     Serial.print(isOnStandBy);
     Serial.print(" ");
     Serial.print(settings.standbyTemp);
     Serial.print(" ");
-    Serial.println(settings.standbyTime);
+    Serial.print(settings.standbyTime);
+    Serial.print(" ");
+    Serial.println(tempVariation);
 
     serialMillis = millis();
   }
@@ -293,9 +303,9 @@ void resetFailSafe() {
   settings.firstBoot = 123;
   settings.standbyTemp = 150;
   settings.standbyTime = 60; // seconds
-  settings.p = 4;
+  settings.p = 4.5;
   settings.i = 0;
-  settings.d = 1.8;
+  settings.d = 2;
   settings.m1 = 300;
   settings.m2 = 260;
   settings.m3 = 350;
@@ -455,16 +465,23 @@ void viewMain() {
     }
 
     // draw the memory icon
-    if (Setpoint == settings.m1) {
-      drawMemIcon(MEM1);
-      settings.lastMem = MEM1;
-    } else if (Setpoint == settings.m2) {
-      drawMemIcon(MEM2);
-      settings.lastMem = MEM2;
-    } else if (Setpoint == settings.m3) {
-      drawMemIcon(MEM3);
+
+    if (!isOnStandBy){
+      if (Setpoint == settings.m1) {
+        drawMemIcon(MEM1);
+        settings.lastMem = MEM1;
+      } else if (Setpoint == settings.m2) {
+        drawMemIcon(MEM2);
+        settings.lastMem = MEM2;
+      } else if (Setpoint == settings.m3) {
+        drawMemIcon(MEM3);
       settings.lastMem = MEM3;
+      }
+    }else{
+      u8g.drawStr(0,49,"STAND BY");
     }
+
+
   } else {
 
     // render main view - store
@@ -513,7 +530,7 @@ void viewSettings() {
       bottomText = "FACTOR";
       break;
     case 8: // max power
-      topText = dtostrf(map(settings.maxPower,0,254,0,100)+0.0f,0,0,topBuf);
+      topText = dtostrf(map(settings.maxPower,0,255,0,100)+0.0f,0,0,topBuf);
       bottomText = "%";
       break;
     case 9: // save
@@ -583,7 +600,7 @@ void rotaryMain() {
   if (b == ClickEncoder::Clicked) {
     void resetTimeouts();
     if (isOnStandBy) {
-      Setpoint = tempBeforeEnteringStandby;
+      
       resetStandby();
       return;
     }
@@ -800,18 +817,14 @@ void drawMemIcon(byte memory) {
 double getTemp() { return therm.temperature() * settings.tCorrection; }
 
 void resetStandby() {
+  if (isOnStandBy){
+    // restore temperatureif already on standby
+    Setpoint = tempBeforeEnteringStandby;
+  }
   isOnStandBy = false;
   standByMillis = millis();
 }
 
-// void drawTitle(const char *title) {
-//   u8g.setColorIndex(1);
-//   u8g.drawRBox(0, 0, 83, 10, 2);
-//   u8g.setColorIndex(0);
-//   //u8g.setFont(u8g_font_6x10r);
-//   u8g.setFont(u8g_font_freedoomr10r);
-//   u8g.drawStr(42 - (u8g.getStrWidth(title) / 2), 8, title);
-// }
 void drawTitle(const char *title) {
   u8g.setColorIndex(1);
   u8g.drawRBox(0, 0, 83, 12, 2);
@@ -821,14 +834,14 @@ void drawTitle(const char *title) {
   u8g.drawStr(42 - (u8g.getStrWidth(title) / 2), 13, title);
 }
 
-void drawBoxedStr(u8g_uint_t x, u8g_uint_t y, const char *s) {
-  uint8_t color = u8g.getColorIndex();
-  u8g.setColorIndex(1);
-  u8g.drawRBox(x - 2, y - u8g.getFontLineSpacing(), u8g.getStrWidth(s) + 3, u8g.getFontLineSpacing() + 2, 2);
-  u8g.setColorIndex(0);
-  u8g.drawStr(x, y, s);
-  u8g.setColorIndex(color);
-}
+// void drawBoxedStr(u8g_uint_t x, u8g_uint_t y, const char *s) {
+//   uint8_t color = u8g.getColorIndex();
+//   u8g.setColorIndex(1);
+//   u8g.drawRBox(x - 2, y - u8g.getFontLineSpacing(), u8g.getStrWidth(s) + 3, u8g.getFontLineSpacing() + 2, 2);
+//   u8g.setColorIndex(0);
+//   u8g.drawStr(x, y, s);
+//   u8g.setColorIndex(color);
+// }
 
 void drawSettingsView(const char *_title, const char *_value, const char * _unit, bool _blink){
   drawTitle(_title);
