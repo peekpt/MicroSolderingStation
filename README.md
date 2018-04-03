@@ -89,8 +89,24 @@ Remove the ball bearing and connect the led in the hole, break the spring post f
 
 
 
+## Parts & Modules
+
+_100k thermistor (3950):_
+![](https://github.com/peekpt/MicroSolderingStation/raw/master/media/thermistor_100k_3950.jpg)
 
 
+_Arduino Uno R3 ch340:_
+![](https://github.com/peekpt/MicroSolderingStation/raw/master/media/uno_r3_ch340.jpg)
+
+
+_Rotary Encoder:_
+![](https://github.com/peekpt/MicroSolderingStation/raw/master/media/rotary_encoder.jpg)
+
+_USB Soldering Iron:_
+![](https://github.com/peekpt/MicroSolderingStation/raw/master/media/soldering_iron.jpg)
+
+_LCD:_
+![](https://github.com/peekpt/MicroSolderingStation/raw/master/media/lcd.jpg)
 
 
 
