@@ -43,7 +43,10 @@ _(WIP)_
 ## Soldering Tip Diagram
 ![Diagram](https://github.com/peekpt/MicroSolderingStation/raw/master/media/soldering%20tip.png)
 
+## UNO R3 CH340 Hack
+![BOX](https://github.com/peekpt/MicroSolderingStation/raw/master/media/UNO%20CH340%20hack.jpg)
 
+_Cut Power the trace underneath the PCB and connect a rocker switch in series._
 
 ## Description
 
