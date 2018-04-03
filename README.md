@@ -1,6 +1,15 @@
 # Micro Soldering Station
 
-*The cheapest Micro soldering Station ever*
+_Transform a cheap USB soldering iron in a powerfull Active tip Soldering Station._
+
+
+**With almost no thermal capacity this station regulates the tip's temperature instantaneously. Solder larger thermal mass with ease, it's magic.**
+
+_fiy: Active Soldering irons cost a lot of money_
+
+
+
+*The cheapest Micro soldering Station ever:*
 
 ![BOX](https://github.com/peekpt/MicroSolderingStation/raw/master/media/DSCF9575.JPG)
 
@@ -117,6 +126,11 @@ LCD:
 
 
 ![](https://github.com/peekpt/MicroSolderingStation/raw/master/media/lcd.jpg)
+
+Switch:
+
+
+![](https://github.com/peekpt/MicroSolderingStation/raw/master/media/rocker_switch.jpg)
 
 
 
