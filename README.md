@@ -2,7 +2,6 @@
 
 *The cheapest Micro soldering Station ever*
 
-_(WIP)_
 ![BOX](https://github.com/peekpt/MicroSolderingStation/raw/master/media/DSCF9575.JPG)
 
 ![BOX](https://github.com/peekpt/MicroSolderingStation/raw/master/media/box.png)
@@ -12,11 +11,13 @@ _(WIP)_
 - Cheap & easy build under 10$
 - Temperature controled (PID)
 - Micro soldering tip
-- Serial connection interface
+- Serial command interface
+- Ploter (outputs usefull data)
 - User Interface
 - Open Source Arduino based
 - Firmware Updates
 - 3D Printed Case
+- In use, pickup detection (by temperature sensing)
 
 ## Materials
 
@@ -43,24 +44,26 @@ _(WIP)_
 ## Soldering Tip Diagram
 ![Diagram](https://github.com/peekpt/MicroSolderingStation/raw/master/media/soldering%20tip.png)
 
-## UNO R3 CH340 Hack
+## UNO R3 CH340 Power Hack
 ![BOX](https://github.com/peekpt/MicroSolderingStation/raw/master/media/UNO%20CH340%20hack.jpg)
 
 _Cut Power the trace underneath the PCB and connect a rocker switch in series._
 
-## Description
+## Fritzing
+![Fritzing](https://github.com/peekpt/MicroSolderingStation/raw/master/media/fritzing_bb.png)
 
 Remove the pcb from the soldering iron and grab a cable with 4 wires (2 for thermistor, 2 for the heater).
 Poke an hole in the side of the iron's case, near the yellow nut, to pass the 2 wires and solder them to the thermistor.
 Use kapton tape to isolate the thermistor pins and to fix the thermistor's glass tip to the iron end with some kapton turns.
 The other 2 wires connect to the heater and the led with a resistor in series. (watch the polarity of the led)
 Remove the ball bearing and connect the led in the hole, break the spring post from the other side of the case.
-(wip...)
 
-## User Interface Operation
-![Interface](https://github.com/peekpt/MicroSolderingStation/raw/master/media/interface_small.png)
 
-## Commands
+## User Interface Screenshots
+![UNO](https://github.com/peekpt/MicroSolderingStation/raw/master/media/interface_small.png)
+
+
+## Operation
 
 **main view**
 
@@ -86,13 +89,9 @@ Remove the ball bearing and connect the led in the hole, break the spring post f
 
 
 
-_automatic pick up detection: exits standby mode when temperture drops more than 3%_
 
 
 
-
-
-## Screenshots
 
 
 
