@@ -18,7 +18,10 @@ _fiy: Active Soldering irons cost a lot of money_
 
 ## Youtube
 
-[![YOUTUBE](https://img.youtube.com/vi/iJwf-qWp4lI/0.jpg)](https://www.youtube.com/watch?v=iJwf-qWp4lI)
+[![YOUTUBE overview](https://img.youtube.com/vi/iJwf-qWp4lI/0.jpg)](https://www.youtube.com/watch?v=iJwf-qWp4lI)
+
+
+[![YOUTUBE performance](https://img.youtube.com/vi/kRIv3psVogc/0.jpg)](https://www.youtube.com/watch?v=kRIv3psVogc)
 
 
 
