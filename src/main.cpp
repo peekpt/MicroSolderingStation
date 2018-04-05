@@ -11,16 +11,29 @@
 #define HEATER_PIN 3
 #define SENSOR_PIN A0
 
-#define aLenght(x)       (sizeof(x) / sizeof(x[0]))
+//#define aLenght(x)       (sizeof(x) / sizeof(x[0]))
 
 enum VIEW { VIEW_LOGO, VIEW_MAIN, VIEW_SETTINGS } view;
 enum MEM { MEM1, MEM2, MEM3 } mem;
-const char *title[] =  {
-  "EXIT", "STDBY TIME", "STDBY TEMP", "POWER OFF", "PID: P", "PID: I", "PID: D", "TEMP CORR", "MAX POWER", "SAVE ALL",
-      "RESET ALL"
-};
+const char *title[] = {"EXIT",   "STDBY TIME", "STDBY TEMP", "POWER OFF", "SOUNDS", "PID: P",   "PID: I",
+                       "PID: D", "TEMP CORR",  "MAX POWER",  "SAVE ALL",  "RESET ALL"};
+enum MENU { 
+  // it should match title array, this way it's easier to add more menus later
+  MENU_EXIT = 0,
+  MENU_SB_TIME,
+  MENU_SB_TEMP,
+  MENU_PWR_OFF,
+  MENU_SOUND,
+  MENU_P,
+  MENU_I,
+  MENU_D,
+  MENU_T_CORR,
+  MENU_MAX_PWR,
+  MENU_SAVE_ALL,
+  MENU_RESET_ALL,
+  MENU_LENGHT //easy way having the menu lenght
+} menu_e;
 byte menuPosition;
-
 
 byte memoryToStore;
 ClickEncoder *encoder;
@@ -57,6 +70,7 @@ typedef struct EepromMap {
   byte maxPower;
   unsigned int timeout; //  seconds to standby
   byte lastMem;         // lastMemory selected
+  bool sound;           // sound on /off
 
 } eeprom_map_t;
 
@@ -64,26 +78,26 @@ eeprom_map_t settings;
 
 U8GLIB_PCD8544 u8g(10, 9, 8); // uses 13 ,11 as Hardware pins 10-CS 9-A0 8-RS
 
-void setPwmFrequency(int, int); // sets pwm frequency divisor
+// void setPwmFrequency(int, int); // sets pwm frequency divisor
 double getTemp();               // read thermistor temp
-void resetFailSafe();      // setMenuSel all eencLprom encV to default
+void resetFailSafe();           // setMenuSel all eencLprom encV to default
 void printTunnings();           // outputs de pid settings
 void draw();                    // displays a view
 void updateLCD();               // updateLCD
 void viewLogo();                // logo view
-void viewMain();                // main view
-void viewSettings();            // settings view
+void viewMain();                // main view layout
+void viewSettings();            // settings view layout
 void software_Reboot();         // reboots
 void timerIsr();                // rotary switch interrupt
 void rotaryMain();              // rotary Main routines
 void cicleMem();                // cicle ...MEM1->MEM2->MEM3->MEM1...
 void resetTimeouts();           // reset    all timouts running to millis()
 void drawMemIcon(byte);         // draws the given memory icon
-void resetStandby();
-void rotarySettings();
-void drawTitle(const char *);
-//void drawBoxedStr(u8g_uint_t, u8g_uint_t, const char *);
-void drawSettingsView(const char *_title, const char *_value, const char * _unit, bool _blink);
+void resetStandby();            // reset standby time count down
+void rotarySettings();          // process rotary on the settings view
+void drawTitle(const char *);   // draws the title inverse bar on the settings menu
+// void drawBoxedStr(u8g_uint_t, u8g_uint_t, const char *);
+// void drawSettingsView(const char *_title, const char *_value, const char *_unit, bool _blink);
 
 SmoothThermistor therm(SENSOR_PIN,      // the analog pin to read from
                        ADC_SIZE_10_BIT, // the ADC size
@@ -94,7 +108,6 @@ SmoothThermistor therm(SENSOR_PIN,      // the analog pin to read from
                        10);             // the number of samples to take for each measurement
 
 PID myPID(&Input, &Output, &Setpoint, 0, 0, 0, DIRECT);
-
 
 void setup() {
   Serial.begin(9600);
@@ -249,29 +262,27 @@ void loop() {
     // or it will call main screen
     isSavingMemory = false;
     view = VIEW_MAIN;
-    
+
     updateLCD();
   }
 
   // temperature delta per second
-  if (millis() - tempMillis > 1000){
+  if (millis() - tempMillis > 1000) {
     double newTemp = getTemp();
-    tempVariation = (newTemp / oldTemp)-1;
+    tempVariation = (newTemp / oldTemp) - 1;
     oldTemp = newTemp;
     tempMillis = millis();
   }
 
-// detect temperature drop and reset standby
+  // detect temperature drop and reset standby
 
- if(isOnStandBy){ // if on standby
-      if (tempVariation < -0.035){        
-        resetStandby();
-      }
- }else if (tempVariation < -0.02 || tempVariation > 0.02) {  //if not on standby detect larger drops     
-        resetStandby();
+  if (isOnStandBy) { // if on standby
+    if (tempVariation < -0.035) {
+      resetStandby();
+    }
+  } else if (tempVariation < -0.02 || tempVariation > 0.02) { // if not on standby detect larger drops
+    resetStandby();
   }
-
-
 
   // Plotter
   if (millis() - serialMillis > 5000) { // pace the serial output
@@ -313,6 +324,7 @@ void resetFailSafe() {
   settings.maxPower = 220;
   settings.timeout = 30;
   settings.lastMem = MEM1;
+  settings.sound = true;
   myPID.SetTunings(settings.p, settings.i, settings.d);
   EEPROM.put(0, settings); // save values to eeprom
   Serial.println(F("Reseted!"));
@@ -329,62 +341,62 @@ void printTunnings() {
   Serial.println(myPID.GetKd());
 }
 
-void setPwmFrequency(int pin, int divisor) {
-  byte mode;
-  if (pin == 5 || pin == 6 || pin == 9 || pin == 10) {
-    switch (divisor) {
-    case 1:
-      mode = 0x01;
-      break;
-    case 8:
-      mode = 0x02;
-      break;
-    case 64:
-      mode = 0x03;
-      break;
-    case 256:
-      mode = 0x04;
-      break;
-    case 1024:
-      mode = 0x05;
-      break;
-    default:
-      return;
-    }
-    if (pin == 5 || pin == 6) {
-      TCCR0B = TCCR0B & 0b11111000 | mode;
-    } else {
-      TCCR1B = TCCR1B & 0b11111000 | mode;
-    }
-  } else if (pin == 3 || pin == 11) {
-    switch (divisor) {
-    case 1:
-      mode = 0x01;
-      break;
-    case 8:
-      mode = 0x02;
-      break;
-    case 32:
-      mode = 0x03;
-      break;
-    case 64:
-      mode = 0x04;
-      break;
-    case 128:
-      mode = 0x05;
-      break;
-    case 256:
-      mode = 0x06;
-      break;
-    case 1024:
-      mode = 0x07;
-      break;
-    default:
-      return;
-    }
-    TCCR2B = TCCR2B & 0b11111000 | mode;
-  }
-}
+// void setPwmFrequency(int pin, int divisor) {
+//   byte mode;
+//   if (pin == 5 || pin == 6 || pin == 9 || pin == 10) {
+//     switch (divisor) {
+//     case 1:
+//       mode = 0x01;
+//       break;
+//     case 8:
+//       mode = 0x02;
+//       break;
+//     case 64:
+//       mode = 0x03;
+//       break;
+//     case 256:
+//       mode = 0x04;
+//       break;
+//     case 1024:
+//       mode = 0x05;
+//       break;
+//     default:
+//       return;
+//     }
+//     if (pin == 5 || pin == 6) {
+//       TCCR0B = TCCR0B & 0b11111000 | mode;
+//     } else {
+//       TCCR1B = TCCR1B & 0b11111000 | mode;
+//     }
+//   } else if (pin == 3 || pin == 11) {
+//     switch (divisor) {
+//     case 1:
+//       mode = 0x01;
+//       break;
+//     case 8:
+//       mode = 0x02;
+//       break;
+//     case 32:
+//       mode = 0x03;
+//       break;
+//     case 64:
+//       mode = 0x04;
+//       break;
+//     case 128:
+//       mode = 0x05;
+//       break;
+//     case 256:
+//       mode = 0x06;
+//       break;
+//     case 1024:
+//       mode = 0x07;
+//       break;
+//     default:
+//       return;
+//     }
+//     TCCR2B = TCCR2B & 0b11111000 | mode;
+//   }
+// }
 
 void software_Reboot() {
   wdt_enable(WDTO_15MS);
@@ -466,7 +478,7 @@ void viewMain() {
 
     // draw the memory icon
 
-    if (!isOnStandBy){
+    if (!isOnStandBy) {
       if (Setpoint == settings.m1) {
         drawMemIcon(MEM1);
         settings.lastMem = MEM1;
@@ -475,12 +487,11 @@ void viewMain() {
         settings.lastMem = MEM2;
       } else if (Setpoint == settings.m3) {
         drawMemIcon(MEM3);
-      settings.lastMem = MEM3;
+        settings.lastMem = MEM3;
       }
-    }else{
-      u8g.drawStr(0,49,"STAND BY");
+    } else {
+      u8g.drawStr(0, 49, "STAND BY");
     }
-
 
   } else {
 
@@ -495,77 +506,79 @@ void viewMain() {
   }
 }
 void viewSettings() {
-  switch(menuPosition){
+  switch (menuPosition) {
     char topBuf[8];
-    case 0: // exit
-      topText = "";
-      bottomText = "REBOOT";
-      break;
-    case 1: //stand by time
-      topText = dtostrf(settings.standbyTime+0.0f,0,0,topBuf);
-      bottomText = "SECONDS";
-      break;
-    case 2: // stand by temperature
-      topText = dtostrf(settings.standbyTemp+0.0f,0,0,topBuf);
-      bottomText = "CELSIUS";
-      break;
-    case 3: // power off
-      topText = dtostrf(settings.timeout+0.0f,0,0,topBuf);
-      bottomText = "MINUTES";
-      break;
-    case 4: // P
-      topText = dtostrf(settings.p,0,2,topBuf);
-      bottomText = "P";
-      break;
-    case 5: // I
-      topText = dtostrf(settings.i,0,2,topBuf);
-      bottomText = "I";
-      break;
-    case 6: // D
-      topText = dtostrf(settings.d,0,2,topBuf);
-      bottomText = "D";
-      break;
-    case 7: // temp correction
-      topText = dtostrf(settings.tCorrection,0,2,topBuf);
-      bottomText = "FACTOR";
-      break;
-    case 8: // max power
-      topText = dtostrf(map(settings.maxPower,0,255,0,100)+0.0f,0,0,topBuf);
-      bottomText = "%";
-      break;
-    case 9: // save
-      topText = "";
-      bottomText = "EEPROM";
-      break;
-    case 10: // reset
-      topText = "";
-      bottomText = "DEFAULTS";
-      break;
-    default:
-      topText = "";
-      bottomText = "";
+  case MENU_EXIT: // exit
+    topText = "";
+    bottomText = "REBOOT";
     break;
-
+  case MENU_SB_TIME: // stand by time
+    topText = dtostrf(settings.standbyTime + 0.0f, 0, 0, topBuf);
+    bottomText = "SECONDS";
+    break;
+  case MENU_SB_TEMP: // stand by temperature
+    topText = dtostrf(settings.standbyTemp + 0.0f, 0, 0, topBuf);
+    bottomText = "CELSIUS";
+    break;
+  case MENU_PWR_OFF: // power off
+    topText = dtostrf(settings.timeout + 0.0f, 0, 0, topBuf);
+    bottomText = "MINUTES";
+    break;
+  case MENU_SOUND:
+    topText = "";
+    bottomText = (settings.sound) ? "ON" : "OFF";
+    break;
+  case MENU_P: // P
+    topText = dtostrf(settings.p, 0, 2, topBuf);
+    bottomText = "P";
+    break;
+  case MENU_I: // I
+    topText = dtostrf(settings.i, 0, 2, topBuf);
+    bottomText = "I";
+    break;
+  case MENU_D: // D
+    topText = dtostrf(settings.d, 0, 2, topBuf);
+    bottomText = "D";
+    break;
+  case MENU_T_CORR: // temp correction
+    topText = dtostrf(settings.tCorrection, 0, 2, topBuf);
+    bottomText = "FACTOR";
+    break;
+  case MENU_MAX_PWR: // max power
+    topText = dtostrf(map(settings.maxPower, 0, 255, 0, 100) + 0.0f, 0, 0, topBuf);
+    bottomText = "%";
+    break;
+  case MENU_SAVE_ALL: // save
+    topText = "";
+    bottomText = "EEPROM";
+    break;
+  case MENU_RESET_ALL: // reset
+    topText = "";
+    bottomText = "DEFAULTS";
+    break;
+  default:
+    topText = "";
+    bottomText = "";
+    break;
   }
-
 
   // render the view
   drawTitle(title[menuPosition]);
   u8g.setColorIndex(1);
   u8g.setFont(u8g_font_freedoomr25n);
-  if(isEditing){
-    if (blink){
-      u8g.drawStr(42-(u8g.getStrWidth(topText)/2), 39, topText); // center
+  if (isEditing) {
+    if (blink) {
+      u8g.drawStr(42 - (u8g.getStrWidth(topText) / 2), 39, topText); // center
     }
-  }else{
-    u8g.drawStr(42-(u8g.getStrWidth(topText)/2), 39, topText);
+  } else {
+    u8g.drawStr(42 - (u8g.getStrWidth(topText) / 2), 39, topText);
   }
   u8g.setFont(u8g_font_freedoomr10r);
-  u8g.drawStr(42-(u8g.getStrWidth(bottomText)/2), 50, bottomText);
+  u8g.drawStr(42 - (u8g.getStrWidth(bottomText) / 2), 50, bottomText);
   // if (isFastCount){
   //   u8g.drawStr(0,40,"*"); // draw fast count icon
   // }
- }
+}
 
 // rotary behaviour
 void rotaryMain() {
@@ -600,7 +613,7 @@ void rotaryMain() {
   if (b == ClickEncoder::Clicked) {
     void resetTimeouts();
     if (isOnStandBy) {
-      
+
       resetStandby();
       return;
     }
@@ -649,86 +662,89 @@ void rotarySettings() {
     resetTimeouts();
 
     if (encValue > encLast) {
-      if(!isEditing){// if is not editing increment menu
-        menuPosition = constrain(menuPosition+1,0,10); 
-      }else{
-
+      if (!isEditing) { // if is not editing increment menu
+        menuPosition = constrain(menuPosition + 1, 0, MENU_LENGHT);
+      } else {
 
         // increment value
-        switch(menuPosition){
-          case 1:
-            settings.standbyTime = constrain(settings.standbyTime+5,30,300);
+        switch (menuPosition) {
+        case MENU_SB_TIME:
+          settings.standbyTime = constrain(settings.standbyTime + 5, 30, 300);
           break;
-          case 2:
-            i = (isFastCount) ? 10 : 5;
-            settings.standbyTemp = constrain(settings.standbyTemp + i, 0 , 250);
+        case MENU_SB_TEMP:
+          i = (isFastCount) ? 10 : 5;
+          settings.standbyTemp = constrain(settings.standbyTemp + i, 0, 250);
           break;
-          case 3:
-            settings.timeout = constrain(settings.timeout + 10,10,120);
+        case MENU_PWR_OFF:
+          settings.timeout = constrain(settings.timeout + 10, 10, 120);
           break;
-          case 4:
-            d = (isFastCount) ? 1 : 0.01;
-            settings.p = constrain(settings.p + d,0,30);
+        case MENU_SOUND:
+          settings.sound = true;
+        break;
+        case MENU_P:
+          d = (isFastCount) ? 1 : 0.01;
+          settings.p = constrain(settings.p + d, 0, 30);
           break;
-          case 5:
-            d = (isFastCount) ? 1 : 0.01;
-            settings.i = constrain(settings.i + d,0,30);
+        case MENU_I:
+          d = (isFastCount) ? 1 : 0.01;
+          settings.i = constrain(settings.i + d, 0, 30);
           break;
-          case 6:
-            d = (isFastCount) ? 1 : 0.01;
-            settings.d = constrain(settings.d + d,0,30);
+        case MENU_D:
+          d = (isFastCount) ? 1 : 0.01;
+          settings.d = constrain(settings.d + d, 0, 30);
           break;
-          case 7:
-            settings.tCorrection = constrain(settings.tCorrection+0.05,0.5,1.5);
+        case MENU_T_CORR:
+          settings.tCorrection = constrain(settings.tCorrection + 0.05, 0.5, 1.5);
           break;
-          case 8:
-            settings.maxPower = constrain(settings.maxPower+2,50,255);
+        case MENU_MAX_PWR:
+          settings.maxPower = constrain(settings.maxPower + 2, 50, 255);
           break;
-          default:
+        default:
           break;
         }
-
       }
     }
     if (encValue < encLast) {
-      if(!isEditing){// if is not editing decrement menu
-        menuPosition = constrain(menuPosition-1,0,10); 
-      }else{
+      if (!isEditing) { // if is not editing decrement menu
+        menuPosition = constrain(menuPosition - 1, 0, MENU_LENGHT);
+      } else {
         // decrement value
-        
-        switch(menuPosition){
-          case 1:
-            settings.standbyTime = constrain(settings.standbyTime-5,30,300);
-            break;
-          case 2:
-            i = (isFastCount) ? 10 : 5;
-            settings.standbyTemp = constrain(settings.standbyTemp - i, 0 , 250);
+
+        switch (menuPosition) {
+        case MENU_SB_TIME:
+          settings.standbyTime = constrain(settings.standbyTime - 5, 30, 300);
           break;
-          case 3:
-            settings.timeout = constrain(settings.timeout - 10,10,120);
+        case MENU_SB_TEMP:
+          i = (isFastCount) ? 10 : 5;
+          settings.standbyTemp = constrain(settings.standbyTemp - i, 0, 250);
           break;
-          case 4:
-            d = (isFastCount) ? 1 : 0.01;
-            settings.p = constrain(settings.p - d,0,30);
+        case MENU_PWR_OFF:
+          settings.timeout = constrain(settings.timeout - 10, 10, 120);
           break;
-          case 5:
-            d = (isFastCount) ? 1 : 0.01;
-            settings.i = constrain(settings.i - d,0,30);
+        case MENU_SOUND:
+          settings.sound = false;
           break;
-          case 6:
-            d = (isFastCount) ? 1 : 0.01;
-            settings.d = constrain(settings.d - d,0,30);
+        case MENU_P:
+          d = (isFastCount) ? 1 : 0.01;
+          settings.p = constrain(settings.p - d, 0, 30);
           break;
-          case 7:
-            settings.tCorrection = constrain(settings.tCorrection-0.05,0.5,1.5);
+        case MENU_I:
+          d = (isFastCount) ? 1 : 0.01;
+          settings.i = constrain(settings.i - d, 0, 30);
           break;
-          case 8:
-            settings.maxPower = constrain(settings.maxPower-2,50,255);
+        case MENU_D:
+          d = (isFastCount) ? 1 : 0.01;
+          settings.d = constrain(settings.d - d, 0, 30);
           break;
-          default:
+        case MENU_T_CORR:
+          settings.tCorrection = constrain(settings.tCorrection - 0.05, 0.5, 1.5);
+          break;
+        case MENU_MAX_PWR:
+          settings.maxPower = constrain(settings.maxPower - 2, 50, 255);
+          break;
+        default:
           break;
         }
-        
       }
     }
     blink = true;
@@ -739,28 +755,25 @@ void rotarySettings() {
   // on click
   if (b == ClickEncoder::Clicked) {
     resetTimeouts();
-    if(menuPosition == 0 && !isEditing){// exit
+    if (menuPosition == MENU_EXIT && !isEditing) { // exit
       software_Reboot();
-    }else if (menuPosition == 10 && !isEditing ){ // reset
+    } else if (menuPosition == MENU_RESET_ALL && !isEditing) { // reset
       resetFailSafe();
-    }else if (menuPosition == 9 && !isEditing) {  //save
-      EEPROM.put(0,settings);
+    } else if (menuPosition == MENU_SAVE_ALL && !isEditing) { // save
+      EEPROM.put(0, settings);
       delay(100);
       software_Reboot();
     }
 
     isEditing = !isEditing;
-    
   }
-  if (b == ClickEncoder::Held){
-    
-      isFastCount = true;
-    
-  }else{
+  if (b == ClickEncoder::Held) {
+
+    isFastCount = true;
+
+  } else {
     isFastCount = false;
   }
-
-  
 }
 
 void cicleMem() {
@@ -817,7 +830,7 @@ void drawMemIcon(byte memory) {
 double getTemp() { return therm.temperature() * settings.tCorrection; }
 
 void resetStandby() {
-  if (isOnStandBy){
+  if (isOnStandBy) {
     // restore temperatureif already on standby
     Setpoint = tempBeforeEnteringStandby;
   }
@@ -829,7 +842,7 @@ void drawTitle(const char *title) {
   u8g.setColorIndex(1);
   u8g.drawRBox(0, 0, 83, 12, 2);
   u8g.setColorIndex(0);
-  //u8g.setFont(u8g_font_6x10r);
+  // u8g.setFont(u8g_font_6x10r);
   u8g.setFont(u8g_font_freedoomr10r);
   u8g.drawStr(42 - (u8g.getStrWidth(title) / 2), 13, title);
 }
@@ -843,20 +856,17 @@ void drawTitle(const char *title) {
 //   u8g.setColorIndex(color);
 // }
 
-void drawSettingsView(const char *_title, const char *_value, const char * _unit, bool _blink){
-  drawTitle(_title);
-  u8g.setColorIndex(1);
-  u8g.setFont(u8g_font_freedoomr10r);
-  if(_blink){
-    if (blink){
-      u8g.drawStr(42-(u8g.getStrWidth(_value)/2), 40, _value); // center
-    }
-  }else{
-    u8g.drawStr(42-(u8g.getStrWidth(_value)/2), 40, _value);
-  }
-  u8g.setFont(u8g_font_6x10r);
-  u8g.drawStr(42-(u8g.getStrWidth(_unit)/2), 48, _unit);
-
-}
-
-
+// void drawSettingsView(const char *_title, const char *_value, const char *_unit, bool _blink) {
+//   drawTitle(_title);
+//   u8g.setColorIndex(1);
+//   u8g.setFont(u8g_font_freedoomr10r);
+//   if (_blink) {
+//     if (blink) {
+//       u8g.drawStr(42 - (u8g.getStrWidth(_value) / 2), 40, _value); // center
+//     }
+//   } else {
+//     u8g.drawStr(42 - (u8g.getStrWidth(_value) / 2), 40, _value);
+//   }
+//   u8g.setFont(u8g_font_6x10r);
+//   u8g.drawStr(42 - (u8g.getStrWidth(_unit) / 2), 48, _unit);
+// }
