@@ -15,9 +15,11 @@
 
 enum VIEW { VIEW_LOGO, VIEW_MAIN, VIEW_SETTINGS } view;
 enum MEM { MEM1, MEM2, MEM3 } mem;
-const char *title[] = {"EXIT",   "STDBY TIME", "STDBY TEMP", "POWER OFF", "SOUNDS", "PID: P",   "PID: I",
-                       "PID: D", "TEMP CORR",  "MAX POWER",  "SAVE ALL",  "RESET ALL"};
-enum MENU { 
+
+
+const char *title[] = {"EXIT", "STDBY TIME", "STDBY TEMP", "POWER OFF", "SOUNDS", "PID: P",
+                       "PID: I", "PID: D", "TEMP CORR", "MAX POWER", "SAVE ALL", "RESET ALL"};
+enum MENU {
   // it should match title array, this way it's easier to add more menus later
   MENU_EXIT = 0,
   MENU_SB_TIME,
@@ -31,7 +33,7 @@ enum MENU {
   MENU_MAX_PWR,
   MENU_SAVE_ALL,
   MENU_RESET_ALL,
-  MENU_LENGHT //easy way having the menu lenght
+  MENU_LENGHT // easy way having the menu lenght
 } menu_e;
 byte menuPosition;
 
@@ -79,23 +81,23 @@ eeprom_map_t settings;
 U8GLIB_PCD8544 u8g(10, 9, 8); // uses 13 ,11 as Hardware pins 10-CS 9-A0 8-RS
 
 // void setPwmFrequency(int, int); // sets pwm frequency divisor
-double getTemp();               // read thermistor temp
-void resetFailSafe();           // setMenuSel all eencLprom encV to default
-void printTunnings();           // outputs de pid settings
-void draw();                    // displays a view
-void updateLCD();               // updateLCD
-void viewLogo();                // logo view
-void viewMain();                // main view layout
-void viewSettings();            // settings view layout
-void software_Reboot();         // reboots
-void timerIsr();                // rotary switch interrupt
-void rotaryMain();              // rotary Main routines
-void cicleMem();                // cicle ...MEM1->MEM2->MEM3->MEM1...
-void resetTimeouts();           // reset    all timouts running to millis()
-void drawMemIcon(byte);         // draws the given memory icon
-void resetStandby();            // reset standby time count down
-void rotarySettings();          // process rotary on the settings view
-void drawTitle(const char *);   // draws the title inverse bar on the settings menu
+double getTemp();             // read thermistor temp
+void resetFailSafe();         // setMenuSel all eencLprom encV to default
+void printTunnings();         // outputs de pid settings
+void draw();                  // displays a view
+void updateLCD();             // updateLCD
+void viewLogo();              // logo view
+void viewMain();              // main view layout
+void viewSettings();          // settings view layout
+void software_Reboot();       // reboots
+void timerIsr();              // rotary switch interrupt
+void rotaryMain();            // rotary Main routines
+void cicleMem();              // cicle ...MEM1->MEM2->MEM3->MEM1...
+void resetTimeouts();         // reset    all timouts running to millis()
+void drawMemIcon(byte);       // draws the given memory icon
+void resetStandby();          // reset standby time count down
+void rotarySettings();        // process rotary on the settings view
+void drawTitle(const char *); // draws the title inverse bar on the settings menu
 // void drawBoxedStr(u8g_uint_t, u8g_uint_t, const char *);
 // void drawSettingsView(const char *_title, const char *_value, const char *_unit, bool _blink);
 
@@ -680,7 +682,7 @@ void rotarySettings() {
           break;
         case MENU_SOUND:
           settings.sound = true;
-        break;
+          break;
         case MENU_P:
           d = (isFastCount) ? 1 : 0.01;
           settings.p = constrain(settings.p + d, 0, 30);
