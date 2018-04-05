@@ -58,7 +58,7 @@ _fiy: Active Soldering irons cost a lot of money_
 
 ## Schematic
 
-![Schematic](https://github.com/peekpt/MicroSolderingStation/raw/master/media/Schematic_MicroSolderingStation.png)
+![Schematic](https://raw.githubusercontent.com/peekpt/MicroSolderingStation/master/media/Schematic_MicroSolderingStation_Micro-Soldering-Station_20180405173110.png)
 
 
 
