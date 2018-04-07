@@ -284,11 +284,10 @@ void loop() {
   // if auto restore is enabled
   if (isOnStandBy) { // if on standby
     // lower temperature has lower drop percentage for detection
-    // linear equation -> temperature drop trigger = (current temp - 90) / 6000
-
+   
     if (settings.restore) { // if on auto restore
       double tDrop; // drop percentage
-      tDrop = (Input - 90) / 6000;
+      tDrop = Input / 7500;
       tDrop = (tDrop >= 0.015) ? tDrop : 0.015; // cap at 1.5%
       if (tempVariation < -tDrop) {
         resetStandby();
