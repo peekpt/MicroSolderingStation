@@ -16,14 +16,14 @@
 enum VIEW { VIEW_LOGO, VIEW_MAIN, VIEW_SETTINGS } view;
 enum MEM { MEM1, MEM2, MEM3 } mem;
 
-
-const char *title[] = {"EXIT", "STDBY TIME", "STDBY TEMP", "POWER OFF", "SOUNDS", "PID: P",
-                       "PID: I", "PID: D", "TEMP CORR", "MAX POWER", "SAVE ALL", "RESET ALL"};
+const char *title[] = {"EXIT",   "STDBY TIME", "STDBY TEMP", "RESTORE",   "POWER OFF", "SOUNDS",   "PID: P",
+                       "PID: I", "PID: D",     "TEMP CORR",  "MAX POWER", "SAVE ALL",  "RESET ALL"};
 enum MENU {
   // it should match title array, this way it's easier to add more menus later
   MENU_EXIT = 0,
   MENU_SB_TIME,
   MENU_SB_TEMP,
+  MENU_RESTORE,
   MENU_PWR_OFF,
   MENU_SOUND,
   MENU_P,
@@ -43,7 +43,7 @@ int16_t encLast, encValue;
 
 double Setpoint, Input, Output, serialMillis, lcdMillis, logoMillis, blinkMillis, functionTimeout, standByMillis,
     tempBeforeEnteringStandby;
-bool isDisplayingLogo, blink, isSavingMemory, isOnStandBy;
+bool isDisplayingLogo, blink, isSavingMemory, isOnStandBy, isPlotting;
 
 // measuring the temp variation per second
 double tempVariation;
@@ -73,6 +73,7 @@ typedef struct EepromMap {
   unsigned int timeout; //  seconds to standby
   byte lastMem;         // lastMemory selected
   bool sound;           // sound on /off
+  bool restore;         // 0 manual 1 auto
 
 } eeprom_map_t;
 
@@ -82,7 +83,7 @@ U8GLIB_PCD8544 u8g(10, 9, 8); // uses 13 ,11 as Hardware pins 10-CS 9-A0 8-RS
 
 // void setPwmFrequency(int, int); // sets pwm frequency divisor
 double getTemp();             // read thermistor temp
-void resetFailSafe();         // setMenuSel all eencLprom encV to default
+void resetFailSafe();         // reset all eeprom to default
 void printTunnings();         // outputs de pid settings
 void draw();                  // displays a view
 void updateLCD();             // updateLCD
@@ -137,13 +138,13 @@ void setup() {
 
   // heater
   // setPwmFrequency(HEATER_PIN, 1);
-  analogWrite(HEATER_PIN, 0); // setMenuSels heater to 0 on s
+  analogWrite(HEATER_PIN, 0); // set heater to 0
 
   lcdMillis = serialMillis = logoMillis = blinkMillis = standByMillis = millis(); // delay routines
 
   // Load EEPROM
   EEPROM.get(0, settings);
-  if (settings.firstBoot != 123) { // if the check number is not present then setMenuSel settings
+  if (settings.firstBoot != 123) { // if the check number is not present then save settings
     resetFailSafe();
   }
   myPID.SetTunings(settings.p, settings.i, settings.d);
@@ -179,6 +180,7 @@ void setup() {
   isOnStandBy = false;
   menuPosition = 0;
   isFastCount = false;
+  isPlotting = false;
 }
 
 void loop() {
@@ -206,14 +208,16 @@ void loop() {
       Setpoint = value;
       Serial.println(Setpoint);
     } else if (command == "s") {
-      // setMenuSel settings
+      // save settings
       settings.p = myPID.GetKp();
       settings.i = myPID.GetKi();
       settings.d = myPID.GetKd();
       EEPROM.put(0, settings);
-      Serial.println(F("Settings setMenuSeld!"));
+      Serial.println(F("Settings saved!"));
     } else if (command == "r") {
       resetFailSafe();
+    } else if (command == "pl") {
+      isPlotting = !isPlotting;
     } else {
       Serial.println(F("Unknown command!"));
     }
@@ -277,36 +281,45 @@ void loop() {
   }
 
   // detect temperature drop and reset standby
-
+  // if auto restore is enabled
   if (isOnStandBy) { // if on standby
-    if (tempVariation < -0.035) {
-      resetStandby();
+    // lower temperature has lower drop percentage for detection
+    // linear equation -> temperature drop trigger = (current temp - 90) / 6000
+
+    if (settings.restore) { // if on auto restore
+      double tDrop; // drop percentage
+      tDrop = (Input - 90) / 6000;
+      tDrop = (tDrop >= 0.015) ? tDrop : 0.015; // cap at 1.5%
+      if (tempVariation < -tDrop) {
+        resetStandby();
+      }
     }
-  } else if (tempVariation < -0.02 || tempVariation > 0.02) { // if not on standby detect larger drops
+  } else if (tempVariation < -0.02 || tempVariation > 0.02) { // if not on standby detect lower drops
     resetStandby();
   }
 
   // Plotter
-  if (millis() - serialMillis > 5000) { // pace the serial output
+  if (millis() - serialMillis > 1000 && isPlotting) { // Plot values
+    const char *spacer = " ";
     Serial.print(Setpoint);
-    Serial.print(" ");
+    Serial.print(spacer);
     Serial.print(Input);
-    Serial.print(" ");
+    Serial.print(spacer);
     Serial.print(Output / settings.maxPower * 100);
-    Serial.print(" ");
+    Serial.print(spacer);
     Serial.print(myPID.GetKp());
-    Serial.print(" ");
+    Serial.print(spacer);
     Serial.print(myPID.GetKi());
-    Serial.print(" ");
+    Serial.print(spacer);
     Serial.print(myPID.GetKd());
-    Serial.print(" ");
+    Serial.print(spacer);
     Serial.print(isOnStandBy);
-    Serial.print(" ");
+    Serial.print(spacer);
     Serial.print(settings.standbyTemp);
-    Serial.print(" ");
+    Serial.print(spacer);
     Serial.print(settings.standbyTime);
-    Serial.print(" ");
-    Serial.println(tempVariation);
+    Serial.print(spacer);
+    Serial.println(tempVariation, 5);
 
     serialMillis = millis();
   }
@@ -327,6 +340,7 @@ void resetFailSafe() {
   settings.timeout = 30;
   settings.lastMem = MEM1;
   settings.sound = true;
+  settings.restore = true;
   myPID.SetTunings(settings.p, settings.i, settings.d);
   EEPROM.put(0, settings); // save values to eeprom
   Serial.println(F("Reseted!"));
@@ -522,6 +536,10 @@ void viewSettings() {
     topText = dtostrf(settings.standbyTemp + 0.0f, 0, 0, topBuf);
     bottomText = "CELSIUS";
     break;
+  case MENU_RESTORE: // restore temperature
+    topText = "";
+    bottomText = (settings.restore) ? "AUTO" : "MANUAL";
+    break;
   case MENU_PWR_OFF: // power off
     topText = dtostrf(settings.timeout + 0.0f, 0, 0, topBuf);
     bottomText = "MINUTES";
@@ -576,7 +594,16 @@ void viewSettings() {
     u8g.drawStr(42 - (u8g.getStrWidth(topText) / 2), 39, topText);
   }
   u8g.setFont(u8g_font_freedoomr10r);
-  u8g.drawStr(42 - (u8g.getStrWidth(bottomText) / 2), 50, bottomText);
+  if (isEditing && topText == "") {
+    if (blink) {
+      u8g.drawStr(42 - (u8g.getStrWidth(bottomText) / 2), 50, bottomText);
+    }
+  } else {
+    u8g.drawStr(42 - (u8g.getStrWidth(bottomText) / 2), 50, bottomText);
+  }
+
+  // u8g.setFont(u8g_font_freedoomr10r);
+  // u8g.drawStr(42 - (u8g.getStrWidth(bottomText) / 2), 50, bottomText);
   // if (isFastCount){
   //   u8g.drawStr(0,40,"*"); // draw fast count icon
   // }
@@ -639,7 +666,7 @@ void rotaryMain() {
         break;
       }
       EEPROM.put(0, settings);
-      Serial.println("Memory setMenuSeld!");
+      Serial.println("Memory Saved!");
       isSavingMemory = false;
     }
   }
@@ -665,7 +692,7 @@ void rotarySettings() {
 
     if (encValue > encLast) {
       if (!isEditing) { // if is not editing increment menu
-        menuPosition = constrain(menuPosition + 1, 0, MENU_LENGHT);
+        menuPosition = constrain(menuPosition + 1, 0, MENU_LENGHT - 1);
       } else {
 
         // increment value
@@ -676,6 +703,9 @@ void rotarySettings() {
         case MENU_SB_TEMP:
           i = (isFastCount) ? 10 : 5;
           settings.standbyTemp = constrain(settings.standbyTemp + i, 0, 250);
+          break;
+        case MENU_RESTORE:
+          settings.restore = true;
           break;
         case MENU_PWR_OFF:
           settings.timeout = constrain(settings.timeout + 10, 10, 120);
@@ -696,7 +726,7 @@ void rotarySettings() {
           settings.d = constrain(settings.d + d, 0, 30);
           break;
         case MENU_T_CORR:
-          settings.tCorrection = constrain(settings.tCorrection + 0.05, 0.5, 1.5);
+          settings.tCorrection = constrain(settings.tCorrection + 0.01, 0.5, 1.5);
           break;
         case MENU_MAX_PWR:
           settings.maxPower = constrain(settings.maxPower + 2, 50, 255);
@@ -708,7 +738,7 @@ void rotarySettings() {
     }
     if (encValue < encLast) {
       if (!isEditing) { // if is not editing decrement menu
-        menuPosition = constrain(menuPosition - 1, 0, MENU_LENGHT);
+        menuPosition = constrain(menuPosition - 1, 0, MENU_LENGHT - 1);
       } else {
         // decrement value
 
@@ -719,6 +749,9 @@ void rotarySettings() {
         case MENU_SB_TEMP:
           i = (isFastCount) ? 10 : 5;
           settings.standbyTemp = constrain(settings.standbyTemp - i, 0, 250);
+          break;
+        case MENU_RESTORE:
+          settings.restore = false;
           break;
         case MENU_PWR_OFF:
           settings.timeout = constrain(settings.timeout - 10, 10, 120);
@@ -739,7 +772,7 @@ void rotarySettings() {
           settings.d = constrain(settings.d - d, 0, 30);
           break;
         case MENU_T_CORR:
-          settings.tCorrection = constrain(settings.tCorrection - 0.05, 0.5, 1.5);
+          settings.tCorrection = constrain(settings.tCorrection - 0.01, 0.5, 1.5);
           break;
         case MENU_MAX_PWR:
           settings.maxPower = constrain(settings.maxPower - 2, 50, 255);
@@ -795,7 +828,7 @@ void cicleMem() {
     break;
   }
 
-  // EEPROM.put(0,settings); //setMenuSel
+  // EEPROM.put(0,settings); //save
 }
 
 void resetTimeouts() { functionTimeout = millis(); }
