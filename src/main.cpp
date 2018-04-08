@@ -283,12 +283,13 @@ void loop() {
   // detect temperature drop and reset standby
   // if auto restore is enabled
   if (isOnStandBy) { // if on standby
-    // lower temperature has lower drop percentage for detection
+    
    
     if (settings.restore) { // if on auto restore
       double tDrop; // drop percentage
-      tDrop = Input / 7500;
-      tDrop = (tDrop >= 0.015) ? tDrop : 0.015; // cap at 1.5%
+      // tDrop = Input / 7500;
+      // tDrop = (tDrop >= 0.05) ? tDrop : 0.015; // cap at 1.5%
+      tDrop = 0.032;
       if (tempVariation < -tDrop) {
         resetStandby();
       }
