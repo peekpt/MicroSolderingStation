@@ -286,15 +286,17 @@ void loop() {
     
    
     if (settings.restore) { // if on auto restore
-      double tDrop; // drop percentage
-      // tDrop = Input / 7500;
-      // tDrop = (tDrop >= 0.05) ? tDrop : 0.015; // cap at 1.5%
-      tDrop = 0.032;
-      if (tempVariation < -tDrop) {
+
+      double powerOut = Output / settings.maxPower* 100;
+      if (tempVariation < -0.032 &&  powerOut < 0.05 ) {
+        // while is dropping power is 0 detects and excessive cooling
+        resetStandby();
+      } else if (tempVariation > 0.025 && powerOut > 9){
+        // while temp is maintaining the standby, power is oscilating and positive variation too
         resetStandby();
       }
     }
-  } else if (tempVariation < -0.02 || tempVariation > 0.02) { // if not on standby detect lower drops
+  } else if (tempVariation > 0.02) { // if not on standby detect lower drops
     resetStandby();
   }
 
