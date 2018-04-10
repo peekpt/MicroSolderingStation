@@ -10,6 +10,7 @@
 
 #define HEATER_PIN 3
 #define SENSOR_PIN A0
+#define BUZZER_PIN 5
 
 //#define aLenght(x)       (sizeof(x) / sizeof(x[0]))
 
@@ -101,6 +102,11 @@ void rotarySettings();        // process rotary on the settings view
 void drawTitle(const char *); // draws the title inverse bar on the settings menu
 // void drawBoxedStr(u8g_uint_t, u8g_uint_t, const char *);
 // void drawSettingsView(const char *_title, const char *_value, const char *_unit, bool _blink);
+void beep();
+void beepBeep();
+void beepBop();
+void bop();
+void bopLong();
 
 SmoothThermistor therm(SENSOR_PIN,      // the analog pin to read from
                        ADC_SIZE_10_BIT, // the ADC size
@@ -121,6 +127,7 @@ void setup() {
   // input and output pins
   pinMode(SENSOR_PIN, INPUT);
   pinMode(HEATER_PIN, OUTPUT);
+  pinMode(BUZZER_PIN, OUTPUT);
 
   // rotary encoder
   encoder = new ClickEncoder(A1, A2, A3); // A, B, BTN
@@ -181,6 +188,7 @@ void setup() {
   menuPosition = 0;
   isFastCount = false;
   isPlotting = false;
+  beep();
 }
 
 void loop() {
@@ -251,6 +259,12 @@ void loop() {
 
   // Control temperature
   Input = getTemp();
+  if (Input < 0 || Input > 450) { // some protection
+    myPID.SetMode(MANUAL);
+    analogWrite(HEATER_PIN, 0);
+    pinMode(HEATER_PIN, INPUT);
+    view = VIEW_LOGO;
+  }
   myPID.Compute();
   analogWrite(HEATER_PIN, Output);
 
@@ -283,15 +297,14 @@ void loop() {
   // detect temperature drop and reset standby
   // if auto restore is enabled
   if (isOnStandBy) { // if on standby
-    
-   
+
     if (settings.restore) { // if on auto restore
 
-      double powerOut = Output / settings.maxPower* 100;
-      if (tempVariation < -0.032 &&  powerOut < 0.05 ) {
+      double powerOut = Output / settings.maxPower * 100;
+      if (tempVariation < -0.032 && powerOut < 0.05) {
         // while is dropping power is 0 detects and excessive cooling
         resetStandby();
-      } else if (tempVariation > 0.025 && powerOut > 9){
+      } else if (tempVariation < -0.025 && powerOut > 9) {
         // while temp is maintaining the standby, power is oscilating and positive variation too
         resetStandby();
       }
@@ -619,6 +632,8 @@ void rotaryMain() {
     encLast = encValue;
   }
   if (encValue != encLast) {
+    bop();
+
     resetStandby();
     if (encValue > encLast) {
       if (!isSavingMemory) {
@@ -642,6 +657,7 @@ void rotaryMain() {
   ClickEncoder::Button b = encoder->getButton();
 
   if (b == ClickEncoder::Clicked) {
+
     void resetTimeouts();
     if (isOnStandBy) {
 
@@ -649,6 +665,7 @@ void rotaryMain() {
       return;
     }
     if (!isSavingMemory) {
+          beep();
       cicleMem();
     } else {
       switch (memoryToStore) {
@@ -670,15 +687,19 @@ void rotaryMain() {
       EEPROM.put(0, settings);
       Serial.println("Memory Saved!");
       isSavingMemory = false;
+          bopLong();
     }
   }
   if (b == ClickEncoder::Held) {
+    
     if (!isSavingMemory) {
       resetTimeouts();
       isSavingMemory = true;
+      beepBop();
     }
   }
   if (b == ClickEncoder::DoubleClicked) {
+    beepBeep();
     resetTimeouts();
     // Serial.println("double clicked");
     view = VIEW_SETTINGS;
@@ -690,6 +711,7 @@ void rotarySettings() {
   encValue += encoder->getValue();
 
   if (encValue != encLast) {
+    bop();
     resetTimeouts();
 
     if (encValue > encLast) {
@@ -791,6 +813,7 @@ void rotarySettings() {
   encLast = encValue;
   // on click
   if (b == ClickEncoder::Clicked) {
+    beep();
     resetTimeouts();
     if (menuPosition == MENU_EXIT && !isEditing) { // exit
       software_Reboot();
@@ -882,6 +905,36 @@ void drawTitle(const char *title) {
   // u8g.setFont(u8g_font_6x10r);
   u8g.setFont(u8g_font_freedoomr10r);
   u8g.drawStr(42 - (u8g.getStrWidth(title) / 2), 13, title);
+}
+
+void beep() {
+  if (settings.sound) {
+    tone(BUZZER_PIN, 1000, 100);
+  }
+}
+void beepBeep() {
+  if (settings.sound) {
+    tone(BUZZER_PIN, 1000, 100);
+    delay(100);
+    tone(BUZZER_PIN, 1000, 100);
+  }
+}
+void beepBop() {
+  if (settings.sound) {
+    tone(BUZZER_PIN, 1000, 100);
+    delay(100);
+    tone(BUZZER_PIN, 500, 100);
+  }
+}
+void bop() {
+  if (settings.sound) {
+    tone(BUZZER_PIN, 500, 50);
+  }
+}
+void bopLong() {
+  if (settings.sound) {
+    tone(BUZZER_PIN, 500, 500);
+  }
 }
 
 // void drawBoxedStr(u8g_uint_t x, u8g_uint_t y, const char *s) {
