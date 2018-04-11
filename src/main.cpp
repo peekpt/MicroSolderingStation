@@ -50,6 +50,7 @@ bool isDisplayingLogo, blink, isSavingMemory, isOnStandBy, isPlotting;
 double tempVariation;
 double oldTemp;
 double tempMillis;
+bool beepAtSetpoint;
 
 // settings menu vars;
 bool isEditing;
@@ -188,6 +189,7 @@ void setup() {
   menuPosition = 0;
   isFastCount = false;
   isPlotting = false;
+  beepAtSetpoint = true;
   beep();
 }
 
@@ -254,6 +256,7 @@ void loop() {
       tempBeforeEnteringStandby = Setpoint;
       Setpoint = settings.standbyTemp;
       isOnStandBy = true;
+
     }
   }
 
@@ -337,6 +340,12 @@ void loop() {
     Serial.println(tempVariation, 5);
 
     serialMillis = millis();
+  }
+
+  if (!isOnStandBy && beepAtSetpoint && Input >= Setpoint-5 && settings.sound){
+    // beeps once when Input reached setpoint 
+    beepAtSetpoint = false;
+    beep();
   }
 }
 
@@ -893,9 +902,11 @@ void resetStandby() {
   if (isOnStandBy) {
     // restore temperatureif already on standby
     Setpoint = tempBeforeEnteringStandby;
+    beepAtSetpoint = true;
   }
   isOnStandBy = false;
   standByMillis = millis();
+  
 }
 
 void drawTitle(const char *title) {
