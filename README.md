@@ -31,14 +31,16 @@ _fiy: Active Soldering irons cost a lot of money_
 
 - Cheap & easy build under 10$
 - Temperature controled (PID)
+- Memories
 - Micro soldering tip
 - Serial command interface
-- Ploter (outputs usefull data)
-- User Interface
+- Ploter (outputs usefull data) 
+- Great User Interface with output power Bargraph
+- UI Sounds, with temperature reached warning.
 - Open Source Arduino based
 - Firmware Updates
 - 3D Printed Case
-- In use, pickup detection (by temperature sensing)
+- Wake up from standby iron pickup detection (by temperature sensing)
 
 ## Materials
 
@@ -58,7 +60,7 @@ _fiy: Active Soldering irons cost a lot of money_
 
 ## Schematic
 
-![Schematic](https://raw.githubusercontent.com/peekpt/MicroSolderingStation/master/media/Schematic_MicroSolderingStation_Micro-Soldering-Station_20180405173110.png)
+![Schematic](https://raw.githubusercontent.com/peekpt/MicroSolderingStation/master/media/schematic.png)
 
 
 
@@ -107,6 +109,18 @@ Remove the ball bearing and connect the led in the hole, break the spring post f
 **edit submenu**
 - \< >                   change value up down
 - [click]                exit submenu
+
+## ChangeLog
+
+2018-4-11
+
+- interfance feedback sounds, you can disable on settings
+- temperature reached beep 
+
+2018-4-9
+
+- improved automatic pickup detection (must be more improved in the future)
+- you can now choose the type of wake up from standby between manual (by clicking) or automatic (by temperature) 
 
 
 
