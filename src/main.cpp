@@ -7,12 +7,8 @@
 #include <U8glib.h>
 #include "avr/wdt.h"
 #include "bitmap_logo.h"
+#include "config.h"
 
-#define HEATER_PIN 3
-#define SENSOR_PIN A0
-#define BUZZER_PIN 5
-
-//#define aLenght(x)       (sizeof(x) / sizeof(x[0]))
 
 enum VIEW { VIEW_LOGO, VIEW_MAIN, VIEW_SETTINGS } view;
 enum MEM { MEM1, MEM2, MEM3 } mem;
@@ -81,7 +77,8 @@ typedef struct EepromMap {
 
 eeprom_map_t settings;
 
-U8GLIB_PCD8544 u8g(10, 9, 8); // uses 13 ,11 as Hardware pins 10-CS 9-A0 8-RS
+
+U8GLIB_PCD8544 u8g(LCD_CS,LCD_A0, LCD_RST); // uses 13 ,11 as Hardware pins 10-CS 9-A0 8-RS
 
 // void setPwmFrequency(int, int); // sets pwm frequency divisor
 double getTemp();             // read thermistor temp
@@ -101,9 +98,7 @@ void drawMemIcon(byte);       // draws the given memory icon
 void resetStandby();          // reset standby time count down
 void rotarySettings();        // process rotary on the settings view
 void drawTitle(const char *); // draws the title inverse bar on the settings menu
-// void drawBoxedStr(u8g_uint_t, u8g_uint_t, const char *);
-// void drawSettingsView(const char *_title, const char *_value, const char *_unit, bool _blink);
-void beep();
+void beep();                  // sound 
 void beepBeep();
 void beepBop();
 void bop();
@@ -351,20 +346,20 @@ void loop() {
 
 void resetFailSafe() {
   settings.firstBoot = 123;
-  settings.standbyTemp = 150;
-  settings.standbyTime = 60; // seconds
-  settings.p = 4.5;
-  settings.i = 0;
-  settings.d = 2;
-  settings.m1 = 300;
-  settings.m2 = 260;
-  settings.m3 = 350;
-  settings.tCorrection = 0.85;
-  settings.maxPower = 220;
-  settings.timeout = 30;
+  settings.standbyTemp = SETTINGS_STANDBY_TEMP;
+  settings.standbyTime = SETTINGS_STANDBY_TIME;
+  settings.p = SETTINGS_P;
+  settings.i = SETTINGS_I;
+  settings.d = SETTINGS_D;
+  settings.m1 = SETTINGS_M1;
+  settings.m2 = SETTINGS_M2;
+  settings.m3 = SETTINGS_M3;
+  settings.tCorrection = SETTINGS_TEMP_CORRECTION;
+  settings.maxPower = SETTINGS_MAX_POWER;
+  settings.timeout = SETTINGS_TIMEOUT;
   settings.lastMem = MEM1;
-  settings.sound = true;
-  settings.restore = true;
+  settings.sound = SETTINGS_SOUND;
+  settings.restore = SETTINGS_RESTORE;
   myPID.SetTunings(settings.p, settings.i, settings.d);
   EEPROM.put(0, settings); // save values to eeprom
   Serial.println(F("Reseted!"));
@@ -381,62 +376,6 @@ void printTunnings() {
   Serial.println(myPID.GetKd());
 }
 
-// void setPwmFrequency(int pin, int divisor) {
-//   byte mode;
-//   if (pin == 5 || pin == 6 || pin == 9 || pin == 10) {
-//     switch (divisor) {
-//     case 1:
-//       mode = 0x01;
-//       break;
-//     case 8:
-//       mode = 0x02;
-//       break;
-//     case 64:
-//       mode = 0x03;
-//       break;
-//     case 256:
-//       mode = 0x04;
-//       break;
-//     case 1024:
-//       mode = 0x05;
-//       break;
-//     default:
-//       return;
-//     }
-//     if (pin == 5 || pin == 6) {
-//       TCCR0B = TCCR0B & 0b11111000 | mode;
-//     } else {
-//       TCCR1B = TCCR1B & 0b11111000 | mode;
-//     }
-//   } else if (pin == 3 || pin == 11) {
-//     switch (divisor) {
-//     case 1:
-//       mode = 0x01;
-//       break;
-//     case 8:
-//       mode = 0x02;
-//       break;
-//     case 32:
-//       mode = 0x03;
-//       break;
-//     case 64:
-//       mode = 0x04;
-//       break;
-//     case 128:
-//       mode = 0x05;
-//       break;
-//     case 256:
-//       mode = 0x06;
-//       break;
-//     case 1024:
-//       mode = 0x07;
-//       break;
-//     default:
-//       return;
-//     }
-//     TCCR2B = TCCR2B & 0b11111000 | mode;
-//   }
-// }
 
 void software_Reboot() {
   wdt_enable(WDTO_15MS);
@@ -626,11 +565,6 @@ void viewSettings() {
     u8g.drawStr(42 - (u8g.getStrWidth(bottomText) / 2), 50, bottomText);
   }
 
-  // u8g.setFont(u8g_font_freedoomr10r);
-  // u8g.drawStr(42 - (u8g.getStrWidth(bottomText) / 2), 50, bottomText);
-  // if (isFastCount){
-  //   u8g.drawStr(0,40,"*"); // draw fast count icon
-  // }
 }
 
 // rotary behaviour
@@ -947,27 +881,3 @@ void bopLong() {
     tone(BUZZER_PIN, 500, 500);
   }
 }
-
-// void drawBoxedStr(u8g_uint_t x, u8g_uint_t y, const char *s) {
-//   uint8_t color = u8g.getColorIndex();
-//   u8g.setColorIndex(1);
-//   u8g.drawRBox(x - 2, y - u8g.getFontLineSpacing(), u8g.getStrWidth(s) + 3, u8g.getFontLineSpacing() + 2, 2);
-//   u8g.setColorIndex(0);
-//   u8g.drawStr(x, y, s);
-//   u8g.setColorIndex(color);
-// }
-
-// void drawSettingsView(const char *_title, const char *_value, const char *_unit, bool _blink) {
-//   drawTitle(_title);
-//   u8g.setColorIndex(1);
-//   u8g.setFont(u8g_font_freedoomr10r);
-//   if (_blink) {
-//     if (blink) {
-//       u8g.drawStr(42 - (u8g.getStrWidth(_value) / 2), 40, _value); // center
-//     }
-//   } else {
-//     u8g.drawStr(42 - (u8g.getStrWidth(_value) / 2), 40, _value);
-//   }
-//   u8g.setFont(u8g_font_6x10r);
-//   u8g.drawStr(42 - (u8g.getStrWidth(_unit) / 2), 48, _unit);
-// }
