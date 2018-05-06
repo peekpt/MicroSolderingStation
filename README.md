@@ -1,3 +1,5 @@
+![gif](https://media.giphy.com/media/1g24tQuxMjtHzBGUSE/giphy.gif)
+
 # Micro Soldering Station
 
 _Transform a cheap USB soldering iron in a powerfull Active tip Soldering Station._
