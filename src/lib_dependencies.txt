@@ -1,0 +1,57 @@
+ClickEncoder
+============
+#ID: 291
+Arduino library to handle rotary encoders with buttons as a user input device
+Homepage: https://github.com/soligen2010/encoder
+Version: 9337a0c46c
+Keywords: input, button, encoder
+Compatible frameworks: arduino
+Compatible platforms: atmelavr, atmelsam, teensy, espressif8266
+Authors: Dennis
+
+PID
+===
+#ID: 2
+A PID controller seeks to keep some input variable close to a desired setpoint by adjusting an output. The way in which it does this can be 'tuned' by adjusting three parameters (P,I,D).
+
+Version: 1.2.0
+Homepage: http://playground.arduino.cc/Code/PIDLibrary
+Keywords: controller, pid, signal
+Compatible frameworks: arduino
+Compatible platforms: atmelavr
+Authors: Brett Beauregard
+
+SmoothThermistor
+================
+#ID: 498
+Flexible thermistor reading library.
+
+Version: 1.2.1
+Keywords: sensors
+Compatible frameworks: arduino
+Compatible platforms: atmelavr, atmelsam, espressif8266, intel_arc32, microchippic32, nordicnrf51, teensy, timsp430
+Authors: Gianni Van Hoecke
+
+TimerOne
+========
+#ID: 131
+Use hardware Timer1 for finer PWM control and/or running an periodic interrupt function
+
+Version: 1.1
+Homepage: http://playground.arduino.cc/Code/Timer1
+Keywords: timing
+Compatible frameworks: arduino
+Compatible platforms: atmelavr
+Authors: Stoyko Dimitrov, Jesse Tane, Jérôme Despatis, Michael Polli, Dan Clemens, Paul Stoffregen
+
+U8glib
+======
+#ID: 7
+A library for monochrome TFTs and OLEDs
+
+Version: 1.19.1
+Homepage: https://github.com/olikraus/u8glib
+Keywords: display
+Compatible frameworks: arduino
+Compatible platforms: atmelavr, atmelsam
+Authors: oliver
